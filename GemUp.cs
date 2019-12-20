@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -128,15 +128,16 @@ namespace GemUp
 
         private IEnumerator TryToGemUp()
         {
-            var SkillGemLevelUps = GameController.Game.IngameState.IngameUi.GemLvlUpPanel.GetChildAtIndex(0);
+            var SkillGemLevelUps = GameController.Game.IngameState.IngameUi.GetChildAtIndex(4).GetChildAtIndex(1).GetChildAtIndex(0);
             if (SkillGemLevelUps == null || !SkillGemLevelUps.IsVisible) yield return waitForNextTry;
 
-
+            //LogMessage("panel found?", 5);
             var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
             var oldMousePosition = Mouse.GetCursorPositionVector();
             _clickWindowOffset = rectangleOfGameWindow.TopLeft;
             //hier gems erkennen
-
+            //RectangleF panel = SkillGemLevelUps.GetClientRect();
+            //Mouse.MoveCursorToPosition(panel.Center + _clickWindowOffset);
 
             foreach (Element element in SkillGemLevelUps.Children)
             {
