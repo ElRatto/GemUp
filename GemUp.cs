@@ -1,3 +1,13 @@
+﻿using ExileCore;
+using ExileCore.PoEMemory;
+using ExileCore.PoEMemory.Components;
+using ExileCore.PoEMemory.MemoryObjects;
+using ExileCore.Shared;
+using ExileCore.Shared.Enums;
+using ExileCore.Shared.Helpers;
+using ImGuiNET;
+using Random_Features.Libs;
+using SharpDX;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,38 +16,36 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using ExileCore;
-using ExileCore.PoEMemory;
-using ExileCore.PoEMemory.Components;
-using ExileCore.PoEMemory.MemoryObjects;
-using ExileCore.Shared;
-using ExileCore.Shared.Enums;
-using ExileCore.Shared.Helpers;
-using SharpDX;
 using Input = ExileCore.Input;
 
 namespace GemUp
 {
     public class GemUp : BaseSettingsPlugin<GemUpSettings>
     {
+        private const string PickitRuleDirectory = "Pickit Rules";
+        private readonly List<Entity> _entities = new List<Entity>();
+        private readonly Stopwatch _pickUpTimer = Stopwatch.StartNew();
         private readonly Stopwatch DebugTimer = Stopwatch.StartNew();
-        
+        private readonly WaitTime toPick = new WaitTime(1);
+        private readonly WaitTime wait1ms = new WaitTime(1);
+        private readonly WaitTime wait2ms = new WaitTime(2);
+        private readonly WaitTime wait3ms = new WaitTime(3);
+        private readonly WaitTime waitForNextTry = new WaitTime(1);
+        private Vector2 _clickWindowOffset;
+        private Dictionary<string, int> _weightsRules = new Dictionary<string, int>();
         private WaitTime _workCoroutine;
         public DateTime buildDate;
         private uint coroutineCounter;
-        private Vector2 _clickWindowOffset;
-        private Vector2 cursorBeforeGemUp;
         private bool FullWork = true;
         public string MagicRuleFile;
         private WaitTime mainWorkCoroutine = new WaitTime(5);
         public string NormalRuleFile;
-        private Coroutine gemUpCoroutine;
+        private Coroutine gemupCoroutine;
         public string RareRuleFile;
-        private WaitTime tryToGem = new WaitTime(7);
+        private WaitTime tryToPick = new WaitTime(7);
+        public string UniqueRuleFile;
         private WaitTime waitPlayerMove = new WaitTime(10);
-        private readonly WaitTime waitForNextTry = new WaitTime(1000);
-        private readonly WaitTime toGemUp = new WaitTime(10);
-        private readonly WaitTime wait3ms = new WaitTime(3);
+        private List<string> _customItems = new List<string>();
 
         public GemUp()
         {
@@ -47,14 +55,15 @@ namespace GemUp
         //https://stackoverflow.com/questions/826777/how-to-have-an-auto-incrementing-version-number-visual-studio
         public Version Version { get; } = Assembly.GetExecutingAssembly().GetName().Version;
         public string PluginVersion { get; set; }
+        private List<string> PickitFiles { get; set; }
 
         public override bool Initialise()
         {
             buildDate = new DateTime(2000, 1, 1).AddDays(Version.Build).AddSeconds(Version.Revision * 2);
             PluginVersion = $"{Version}";
-            gemUpCoroutine = new Coroutine(MainWorkCoroutine(), this, "Gem Up");
-            Core.ParallelRunner.Run(gemUpCoroutine);
-            gemUpCoroutine.Pause();
+            gemupCoroutine = new Coroutine(MainWorkCoroutine(), this, "Gem Up");
+            Core.ParallelRunner.Run(gemupCoroutine);
+            gemupCoroutine.Pause();
             DebugTimer.Reset();
             Settings.MouseSpeed.OnValueChanged += (sender, f) => { Mouse.speedMouse = Settings.MouseSpeed.Value; };
             _workCoroutine = new WaitTime(Settings.ExtraDelay);
@@ -62,84 +71,83 @@ namespace GemUp
             return true;
         }
 
+
         private IEnumerator MainWorkCoroutine()
         {
             while (true)
             {
-                yield return GemItUp();
+                yield return FindItemToPick();
 
                 coroutineCounter++;
-                gemUpCoroutine.UpdateTicks(coroutineCounter);
+                gemupCoroutine.UpdateTicks(coroutineCounter);
                 yield return _workCoroutine;
             }
         }
 
-        
+        public override void DrawSettings()
+        {
+            ImGui.BulletText($"v{PluginVersion}");
+            ImGui.BulletText($"Last Updated: {buildDate}");
+            Settings.PickUpKey = ImGuiExtension.HotkeySelector("Gemup Key: " + Settings.PickUpKey.Value.ToString(), Settings.PickUpKey);      
+            Settings.ExtraDelay.Value = ImGuiExtension.IntSlider("Extra Click Delay", Settings.ExtraDelay);
+            Settings.MouseSpeed.Value = ImGuiExtension.FloatSlider("Mouse speed", Settings.MouseSpeed);
+            Settings.TimeBeforeNewClick.Value = ImGuiExtension.IntSlider("Time wait for new click", Settings.TimeBeforeNewClick);
+
+
+        }
 
         public override Job Tick()
         {
-            if (Input.GetKeyState(Keys.Escape)) gemUpCoroutine.Pause();
+            if (Input.GetKeyState(Keys.Escape)) gemupCoroutine.Pause();
 
-            if (Input.GetKeyState(Settings.GemUpKey.Value))
+            if (Input.GetKeyState(Settings.PickUpKey.Value))
             {
                 DebugTimer.Restart();
 
-                if (gemUpCoroutine.IsDone)
+                if (gemupCoroutine.IsDone)
                 {
                     var firstOrDefault = Core.ParallelRunner.Coroutines.FirstOrDefault(x => x.OwnerName == nameof(GemUp));
 
                     if (firstOrDefault != null)
-                        gemUpCoroutine = firstOrDefault;
+                        gemupCoroutine = firstOrDefault;
                 }
 
-                gemUpCoroutine.Resume();
+                gemupCoroutine.Resume();
                 FullWork = false;
             }
             else
             {
                 if (FullWork)
                 {
-                    gemUpCoroutine.Pause();
+                    gemupCoroutine.Pause();
                     DebugTimer.Reset();
                 }
             }
 
-            if (DebugTimer.ElapsedMilliseconds > 2000)
+            if (DebugTimer.ElapsedMilliseconds > 300)
             {
                 FullWork = true;
-                LogMessage("Error gem up stop after time limit 2000 ms", 1);
+                LogMessage("Error gem up stop after time limit 300 ms", 1);
                 DebugTimer.Reset();
             }
+            //Graphics.DrawText($@"PICKIT :: Debug Tick Timer ({DebugTimer.ElapsedMilliseconds}ms)", new Vector2(100, 100), FontAlign.Left);
+            //DebugTimer.Reset();
 
             return null;
         }
 
-        
 
-        
-        //main
-        private IEnumerator GemItUp()
+        private IEnumerator FindItemToPick()
         {
-            if (!Input.GetKeyState(Settings.GemUpKey.Value) || !GameController.Window.IsForeground()) yield break;
- 
-            yield return TryToGemUp();
-            FullWork = true;
-        }
+            if (!Input.GetKeyState(Settings.PickUpKey.Value) || !GameController.Window.IsForeground()) yield break;
 
-        private IEnumerator TryToGemUp()
-        {
-            var SkillGemLevelUps = GameController.Game.IngameState.IngameUi.GetChildAtIndex(4).GetChildAtIndex(1).GetChildAtIndex(0);
-            if (SkillGemLevelUps == null || !SkillGemLevelUps.IsVisible) yield return waitForNextTry;
+            var currentLabels = new List<RectangleF>();
 
-            //LogMessage("panel found?", 5);
-            var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
-            var oldMousePosition = Mouse.GetCursorPositionVector();
-            _clickWindowOffset = rectangleOfGameWindow.TopLeft;
-            //hier gems erkennen
-            //RectangleF panel = SkillGemLevelUps.GetClientRect();
-            //Mouse.MoveCursorToPosition(panel.Center + _clickWindowOffset);
+            var SkillGemLevelUps = GameController.Game.IngameState.IngameUi.GemLvlUpPanel.GemsToLvlUp;
 
-            foreach (Element element in SkillGemLevelUps.Children)
+            var SkillGemLevelUpsi = GameController.Game.IngameState.IngameUi.GetChildAtIndex(4).GetChildAtIndex(1).GetChildAtIndex(0);
+
+            foreach (Element element in SkillGemLevelUps)
             {
                 //if (element == null) continue;
                 RectangleF skillGemButton = element.GetChildAtIndex(1).GetClientRect();
@@ -147,40 +155,77 @@ namespace GemUp
                 string skillGemText = element.GetChildAtIndex(3).Text;
                 if (element.GetChildAtIndex(2).IsVisibleLocal) continue;
 
-                var clientRectCenter = skillGemButton.Center;
-
-                var vector2 = clientRectCenter + _clickWindowOffset;
 
                 if (skillGemText?.ToLower() == "click to level up")
                 {
-                    Mouse.MoveCursorToPosition(vector2);
-                    yield return wait3ms;
-                    Mouse.MoveCursorToPosition(vector2);
-                    yield return wait3ms;
-                    yield return Mouse.LeftClick();
-                    yield return toGemUp;
-
-
+                    currentLabels.Add(skillGemButton);
 
                 }
-                
-            }
-            Mouse.MoveCursorToPosition(oldMousePosition);
-            yield return waitForNextTry;
-            
 
-            //   
+
+            }
+
+
+            //currentLabels = null; //hier alle gemupfelder sucehn
+
+
+            GameController.Debug["GemUp"] = currentLabels;
+            //var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
+            //rectangleOfGameWindow.Inflate(-36, -36);
+            var pickUpThisItem = currentLabels.FirstOrDefault();
+
+            yield return TryToPickV2(pickUpThisItem);
+
+            FullWork = true;
         }
 
+        private IEnumerator TryToPickV2(RectangleF pickItItem)
+        {
+            if (pickItItem == null)
+            {
+                FullWork = true;
+                LogMessage("PickItem is not valid.", 5, Color.Red);
+                yield break;
+            }
 
-    
+            var clickpoint = Misc.GetClickPos(pickItItem);
+            var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
 
+            //var oldMousePosition = Mouse.GetCursorPositionVector();
+            _clickWindowOffset = rectangleOfGameWindow.TopLeft;
+
+            var vector2 = clickpoint + _clickWindowOffset;
+
+            Mouse.MoveCursorToPosition(vector2);
+            yield return wait2ms;
+
+
+            yield return Mouse.LeftClick();
+
+            yield return toPick;
+
+        }
+
+        #region (Re)Loading Rules
 
 
         public override void OnPluginDestroyForHotReload()
         {
-            gemUpCoroutine.Done(true);
+            gemupCoroutine.Done(true);
         }
-      
+
+        #endregion
+
+        #region Adding / Removing Entities
+
+        public override void EntityAdded(Entity Entity)
+        {
+        }
+
+        public override void EntityRemoved(Entity Entity)
+        {
+        }
+
+        #endregion
     }
 }
