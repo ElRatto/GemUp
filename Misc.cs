@@ -5,7 +5,7 @@ using ExileCore.Shared.Helpers;
 
 namespace GemUp
 {
-    public class Misc
+    public static class Misc
     {
         public static float EntityDistance(Entity entity, Entity player)
         {
@@ -16,25 +16,29 @@ namespace GemUp
 
             var objectPosition = component.Pos;
 
-            return Vector3.Distance(objectPosition, player.GetComponent<Render>().Pos);
+            return Vector3.Distance(objectPosition,
+                player.GetComponent<Render>().Pos);
         }
 
-        public static Vector2 GetClickPos(RectangleF viereck)
+        public static Vector2 GetClickPos(RectangleF rectangleF)
         {
-            var paddingPixels = 3;
-            var x = MathHepler.Randomizer.Next((int)viereck.TopLeft.X + paddingPixels, (int)viereck.TopRight.X - paddingPixels);
-            var y = MathHepler.Randomizer.Next((int)viereck.TopLeft.Y + paddingPixels, (int)viereck.BottomLeft.Y - paddingPixels);
+            const int paddingPixels = 3;
+            var x = MathHepler.Randomizer.Next(
+                (int) rectangleF.TopLeft.X + paddingPixels,
+                (int) rectangleF.TopRight.X - paddingPixels);
+            var y = MathHepler.Randomizer.Next(
+                (int) rectangleF.TopLeft.Y + paddingPixels,
+                (int) rectangleF.BottomLeft.Y - paddingPixels);
             return new Vector2(x, y);
         }
 
-        public static Vector2 RandomizePos(Vector2 OldPos)
+        public static Vector2 RandomizePos(Vector2 oldPos)
         {
-            var x = MathHepler.Randomizer.Next((int)OldPos.X - 50, (int)OldPos.X + 50);
-            var y = MathHepler.Randomizer.Next((int)OldPos.Y - 50, (int)OldPos.Y + 50);
+            var x = MathHepler.Randomizer.Next((int) oldPos.X - 50,
+                (int) oldPos.X + 50);
+            var y = MathHepler.Randomizer.Next((int) oldPos.Y - 50,
+                (int) oldPos.Y + 50);
             return new Vector2(x, y);
-
         }
-
-
     }
 }
