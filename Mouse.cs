@@ -7,26 +7,26 @@ using SharpDX;
 
 namespace GemUp
 {
-    public class Mouse
+    public static class Mouse
     {
-        public const int MOUSEEVENTF_MOVE = 0x0001;
-        public const int MouseeventfLeftdown = 0x02;
-        public const int MouseeventfLeftup = 0x04;
-        public const int MouseeventfMiddown = 0x0020;
-        public const int MouseeventfMidup = 0x0040;
-        public const int MouseeventfRightdown = 0x0008;
-        public const int MouseeventfRightup = 0x0010;
-        public const int MouseEventWheel = 0x800;
+        private const int MouseEventMove = 0x0001;
+        private const int MouseEventLeftDown = 0x02;
+        private const int MouseEventLeftUp = 0x04;
+        private const int MouseEventMidDown = 0x0020;
+        private const int MouseEventMidUp = 0x0040;
+        private const int MouseEventRightDown = 0x0008;
+        private const int MouseEventRightUp = 0x0010;
+        private const int MouseEventWheel = 0x800;
 
-        // 
         private const int MovementDelay = 10;
         private const int ClickDelay = 1;
 
         [DllImport("user32.dll")]
-        public static extern bool SetCursorPos(int x, int y);
+        private static extern bool SetCursorPos(int x, int y);
 
         [DllImport("user32.dll")]
-        private static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+        private static extern void mouse_event(int dwFlags, int dx, int dy,
+            int cButtons, int dwExtraInfo);
 
         [DllImport("user32.dll")]
         public static extern bool BlockInput(bool fBlockIt);
@@ -49,9 +49,11 @@ namespace GemUp
         /// <param name="position"></param>
         /// <param name="gameWindow"></param>
         /// <returns></returns>
-        public static bool SetCurosPosToCenterOfRec(RectangleF position, RectangleF gameWindow)
+        public static bool SetCursorPosToCenterOfRec(RectangleF position,
+            RectangleF gameWindow)
         {
-            return SetCursorPos((int) (gameWindow.X + position.Center.X), (int) (gameWindow.Y + position.Center.Y));
+            return SetCursorPos((int) (gameWindow.X + position.Center.X),
+                (int) (gameWindow.Y + position.Center.Y));
         }
 
         /// <summary>
@@ -69,36 +71,38 @@ namespace GemUp
 
         public static void LeftMouseDown()
         {
-            mouse_event(MouseeventfLeftdown, 0, 0, 0, 0);
+            mouse_event(MouseEventLeftDown, 0, 0, 0, 0);
         }
 
         public static void LeftMouseUp()
         {
-            mouse_event(MouseeventfLeftup, 0, 0, 0, 0);
+            mouse_event(MouseEventLeftUp, 0, 0, 0, 0);
         }
 
         public static void RightMouseDown()
         {
-            mouse_event(MouseeventfRightdown, 0, 0, 0, 0);
+            mouse_event(MouseEventRightDown, 0, 0, 0, 0);
         }
 
         public static void RightMouseUp()
         {
-            mouse_event(MouseeventfRightup, 0, 0, 0, 0);
+            mouse_event(MouseEventRightUp, 0, 0, 0, 0);
         }
 
-        public static void SetCursorPosAndLeftClick(Vector2 coords, int extraDelay)
+        public static void SetCursorPosAndLeftClick(Vector2 coords,
+            int extraDelay)
         {
             var posX = (int) coords.X;
             var posY = (int) coords.Y;
             SetCursorPos(posX, posY);
             Thread.Sleep(MovementDelay + extraDelay);
-            mouse_event(MouseeventfLeftdown, 0, 0, 0, 0);
+            mouse_event(MouseEventLeftDown, 0, 0, 0, 0);
             Thread.Sleep(ClickDelay);
-            mouse_event(MouseeventfLeftup, 0, 0, 0, 0);
+            mouse_event(MouseEventLeftUp, 0, 0, 0, 0);
         }
 
-        public static void SetCursorPosAndLeftOrRightClick(Vector2 coords, int extraDelay, bool leftClick = true)
+        public static void SetCursorPosAndLeftOrRightClick(Vector2 coords,
+            int extraDelay, bool leftClick = true)
         {
             var posX = (int) coords.X;
             var posY = (int) coords.Y;
@@ -163,7 +167,8 @@ namespace GemUp
         {
             var cursor = GetCursorPositionVector();
             var stepVector2 = new Vector2();
-            var step = (float) Math.Sqrt(Vector2.Distance(cursor, end)) * 1.618f;
+            var step = (float) Math.Sqrt(Vector2.Distance(cursor, end)) *
+                       1.618f;
             if (step > 275) step = 240;
             stepVector2.X = (end.X - cursor.X) / step;
             stepVector2.Y = (end.Y - cursor.Y) / step;
@@ -179,7 +184,8 @@ namespace GemUp
             }
         }
 
-        public static void SetCursorPosAndLeftClickHuman(Vector2 coords, int extraDelay)
+        public static void SetCursorPosAndLeftClickHuman(Vector2 coords,
+            int extraDelay)
         {
             SetCursorPosition(coords);
             Thread.Sleep(MovementDelay + extraDelay);
@@ -196,20 +202,23 @@ namespace GemUp
         public static void MoveCursorToPosition(Vector2 vec)
         {
             SetCursorPos((int) vec.X, (int) vec.Y);
-            MouseMove();
+            MoveMouse();
         }
 
-        public static float speedMouse;
+        public static float MouseSpeed;
 
         public static IEnumerator SetCursorPosHuman(Vector2 vec)
         {
-            var step = (float) Math.Sqrt(Vector2.Distance(GetCursorPositionVector(), vec)) * speedMouse / 20;
+            var step =
+                (float) Math.Sqrt(Vector2.Distance(GetCursorPositionVector(),
+                    vec)) * MouseSpeed / 20;
 
             if (step > 6)
             {
                 for (var i = 0; i < step; i++)
                 {
-                    var vector2 = Vector2.SmoothStep(GetCursorPositionVector(), vec, i / step);
+                    var vector2 = Vector2.SmoothStep(GetCursorPositionVector(),
+                        vec, i / step);
                     SetCursorPos((int) vector2.X, (int) vector2.Y);
                     yield return new WaitTime(1);
                 }
@@ -225,9 +234,9 @@ namespace GemUp
             LeftMouseUp();
         }
 
-        public static void MouseMove()
+        public static void MoveMouse()
         {
-            mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0);
+            mouse_event(MouseEventMove, 0, 0, 0, 0);
         }
 
         #endregion

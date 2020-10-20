@@ -20,8 +20,13 @@ namespace GemUp
         public HotkeyNode PickUpKey { get; set; }
         public RangeNode<int> ExtraDelay { get; set; }
         public RangeNode<float> MouseSpeed { get; set; }
-        public ToggleNode ReturnMouseToBeforeClickPosition { get; set; } = new ToggleNode(true);
-        public RangeNode<int> TimeBeforeNewClick { get; set; } = new RangeNode<int>(500, 0, 1500);
+
+        public ToggleNode ReturnMouseToBeforeClickPosition { get; set; } =
+            new ToggleNode(true);
+
+        public RangeNode<int> TimeBeforeNewClick { get; set; } =
+            new RangeNode<int>(500, 0, 1500);
+
         public ToggleNode IdleGemUp { get; set; }
         public RangeNode<int> CheckEveryXTick { get; set; }
     }
