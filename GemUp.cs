@@ -109,7 +109,7 @@ namespace GemUp
 
             if (Input.GetKeyState(Keys.Escape)) _gemLvlCoroutine.Pause();
 
-            var pickUpWhenIdle = false;
+            var clickWhenIdle = false;
 
             if (Settings.IdleGemUp.Value)
                 if (GameController?.Player?.GetComponent<Actor>()?.Animation ==
@@ -119,12 +119,11 @@ namespace GemUp
                         .IngameUi.GemLvlUpPanel.GemsToLvlUp;
 
                     if (skillGemLevelUps.Count > 0)
-                        pickUpWhenIdle = true;
-                    //LogMessage("can lvl up", 1);
+                        clickWhenIdle = true;
                 }
 
             if (Input.GetKeyState(Settings.PickUpKey.Value) ||
-                pickUpWhenIdle)
+                clickWhenIdle)
             {
                 _debugTimer.Restart();
 
