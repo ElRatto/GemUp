@@ -26,5 +26,15 @@ namespace GemUp
             var y = MathHepler.Randomizer.Next((int)viereck.TopLeft.Y + paddingPixels, (int)viereck.BottomLeft.Y - paddingPixels);
             return new Vector2(x, y);
         }
+
+        public static Vector2 RandomizePos(Vector2 OldPos)
+        {
+            var x = MathHepler.Randomizer.Next((int)OldPos.X - 50, (int)OldPos.X + 50);
+            var y = MathHepler.Randomizer.Next((int)OldPos.Y - 50, (int)OldPos.Y + 50);
+            return new Vector2(x, y);
+
+        }
+
+
     }
 }

@@ -92,7 +92,7 @@ namespace GemUp
             Settings.ExtraDelay.Value = ImGuiExtension.IntSlider("Extra Click Delay", Settings.ExtraDelay);
             Settings.MouseSpeed.Value = ImGuiExtension.FloatSlider("Mouse speed", Settings.MouseSpeed);
             Settings.TimeBeforeNewClick.Value = ImGuiExtension.IntSlider("Time wait for new click", Settings.TimeBeforeNewClick);
-
+            Settings.IdleGemUp.Value = ImGuiExtension.Checkbox("Auto Level Up Gems when standing still", Settings.IdleGemUp);
 
         }
 
@@ -100,7 +100,27 @@ namespace GemUp
         {
             if (Input.GetKeyState(Keys.Escape)) gemupCoroutine.Pause();
 
-            if (Input.GetKeyState(Settings.PickUpKey.Value))
+            var pickupwhenidle = false;
+
+            if (Settings.IdleGemUp.Value)
+            {
+                if (GameController?.Player?.GetComponent<Actor>()?.Animation == AnimationE.Idle)
+                {
+                    
+                    var SkillGemLevelUps = GameController.Game.IngameState.IngameUi.GemLvlUpPanel.GemsToLvlUp;
+
+                    if (SkillGemLevelUps.Count > 0)
+                    {
+                        pickupwhenidle = true;
+                        //LogMessage("can lvl up", 1);
+                    }
+
+
+                }
+
+            }
+
+            if (Input.GetKeyState(Settings.PickUpKey.Value) || pickupwhenidle == true)
             {
                 DebugTimer.Restart();
 
@@ -139,17 +159,26 @@ namespace GemUp
 
         private IEnumerator FindItemToPick()
         {
-            if (!Input.GetKeyState(Settings.PickUpKey.Value) || !GameController.Window.IsForeground()) yield break;
+            if (Settings.IdleGemUp.Value) //gems beim idlen aufleveln
+            {
+                if (!GameController.Window.IsForeground()) yield break;
+            }
+            else //mit key
+            {
+                if ((!Input.GetKeyState(Settings.PickUpKey.Value)) || !GameController.Window.IsForeground()) yield break;
+            }
 
             var currentLabels = new List<RectangleF>();
 
             var SkillGemLevelUps = GameController.Game.IngameState.IngameUi.GemLvlUpPanel.GemsToLvlUp;
 
-            var SkillGemLevelUpsi = GameController.Game.IngameState.IngameUi.GetChildAtIndex(4).GetChildAtIndex(1).GetChildAtIndex(0);
+            if (SkillGemLevelUps == null) yield break;
+
 
             foreach (Element element in SkillGemLevelUps)
             {
-                //if (element == null) continue;
+                if (element == null) continue;
+                
                 RectangleF skillGemButton = element.GetChildAtIndex(1).GetClientRect();
 
                 string skillGemText = element.GetChildAtIndex(3).Text;
@@ -165,13 +194,8 @@ namespace GemUp
 
             }
 
-
-            //currentLabels = null; //hier alle gemupfelder sucehn
-
-
             GameController.Debug["GemUp"] = currentLabels;
-            //var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
-            //rectangleOfGameWindow.Inflate(-36, -36);
+
             var pickUpThisItem = currentLabels.FirstOrDefault();
 
             yield return TryToPickV2(pickUpThisItem);
@@ -184,14 +208,15 @@ namespace GemUp
             if (pickItItem == null)
             {
                 FullWork = true;
-                LogMessage("PickItem is not valid.", 5, Color.Red);
+                LogMessage("Gem is not valid.", 5, Color.Red);
                 yield break;
             }
 
             var clickpoint = Misc.GetClickPos(pickItItem);
             var rectangleOfGameWindow = GameController.Window.GetWindowRectangleTimeCache;
 
-            //var oldMousePosition = Mouse.GetCursorPositionVector();
+            var oldMousePosition = Misc.RandomizePos(Mouse.GetCursorPositionVector()); //nicht genau an alte position
+            
             _clickWindowOffset = rectangleOfGameWindow.TopLeft;
 
             var vector2 = clickpoint + _clickWindowOffset;
@@ -203,6 +228,8 @@ namespace GemUp
             yield return Mouse.LeftClick();
 
             yield return toPick;
+
+            Mouse.MoveCursorToPosition(oldMousePosition);
 
         }
 
