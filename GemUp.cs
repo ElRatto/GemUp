@@ -46,6 +46,7 @@ namespace GemUp
         public string UniqueRuleFile;
         private WaitTime waitPlayerMove = new WaitTime(10);
         private List<string> _customItems = new List<string>();
+        private int counter = 0;
 
         public GemUp()
         {
@@ -93,11 +94,26 @@ namespace GemUp
             Settings.MouseSpeed.Value = ImGuiExtension.FloatSlider("Mouse speed", Settings.MouseSpeed);
             Settings.TimeBeforeNewClick.Value = ImGuiExtension.IntSlider("Time wait for new click", Settings.TimeBeforeNewClick);
             Settings.IdleGemUp.Value = ImGuiExtension.Checkbox("Auto Level Up Gems when standing still", Settings.IdleGemUp);
+            Settings.CheckEveryXTick.Value = ImGuiExtension.IntSlider("only check every X tick for gems (10)", Settings.CheckEveryXTick);
 
         }
 
         public override Job Tick()
         {
+            if (Settings.CheckEveryXTick.Value != 0)
+            {
+                if (counter <= Settings.CheckEveryXTick.Value)
+                {
+                    counter++;
+                    return null;
+
+                }
+                else
+                {
+                    counter = 0;
+                }
+            }
+            
             if (Input.GetKeyState(Keys.Escape)) gemupCoroutine.Pause();
 
             var pickupwhenidle = false;
