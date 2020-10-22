@@ -31,6 +31,11 @@ namespace GemUp
         [DllImport("user32.dll")]
         public static extern bool BlockInput(bool fBlockIt);
 
+        public static void blockInput(bool block)
+        {
+            BlockInput(block);
+        }
+
         /// <summary>
         /// Sets the cursor position relative to the game window.
         /// </summary>

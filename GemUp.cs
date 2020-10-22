@@ -38,7 +38,6 @@ namespace GemUp
             Assembly.GetExecutingAssembly().GetName().Version;
 
         private string PluginVersion { get; set; }
-
         public override bool Initialise()
         {
             _buildDate = new DateTime(2000, 1, 1).AddDays(Version.Build)
@@ -96,31 +95,101 @@ namespace GemUp
 
         public override Job Tick()
         {
-            if (Settings.CheckEveryXTick.Value != 0)
+            if (Settings.IdleGemUp.Value)
             {
-                if (_counter <= Settings.CheckEveryXTick.Value)
+
+                if (Settings.CheckEveryXTick.Value != 0)
                 {
-                    _counter++;
-                    return null;
+                    if (_counter <= Settings.CheckEveryXTick.Value)
+                    {
+                        _counter++;
+                        return null;
+                    }
+
+                    _counter = 0;
                 }
 
-                _counter = 0;
             }
-
             if (Input.GetKeyState(Keys.Escape)) _gemLvlCoroutine.Pause();
+
+
+            if (Settings.IdleGemUp.Value)
+            {
+                //safety checks
+                var _goon = true;
+                var _invvisible = GameController.Game.IngameState.IngameUi.InventoryPanel.IsVisible;
+                if (_invvisible)
+                {
+                    _goon = false;
+                }
+                else
+                {
+                    var _atlasvisible = GameController.Game.IngameState.IngameUi.Atlas.IsVisible;
+                    if (_atlasvisible)
+                    {
+                        _goon = false;
+                    }
+                    else
+                    {
+                        var _betrayalvisible = GameController.Game.IngameState.IngameUi.BetrayalWindow.IsVisible;
+                        if (_betrayalvisible)
+                        {
+                            _goon = false;
+                        }
+                        else
+                        {
+                            var _delvevisible = GameController.Game.IngameState.IngameUi.DelveWindow.IsVisible;
+                            if (_delvevisible)
+                            {
+                                _goon = false;
+                            }
+                            else
+                            {
+                                var _deadvisible = GameController.Game.IngameState.IngameUi.ResurrectPanel.IsVisible;
+                                if (_deadvisible)
+                                {
+                                    _goon = false;
+                                }
+                            }
+
+                        }
+
+                    }
+                }
+
+                if (_goon == false) return null;
+            }
 
             var clickWhenIdle = false;
 
             if (Settings.IdleGemUp.Value)
+            {
+                
                 if (GameController?.Player?.GetComponent<Actor>()?.Animation ==
                     AnimationE.Idle)
+       
                 {
                     var skillGemLevelUps = GameController.Game.IngameState
                         .IngameUi.GemLvlUpPanel.GemsToLvlUp;
 
                     if (skillGemLevelUps.Count > 0)
-                        clickWhenIdle = true;
+                    {
+                        foreach (var element in skillGemLevelUps)
+                        {
+                            if (element == null) continue;
+
+                            var skillGemText = element.GetChildAtIndex(3).Text;
+
+                            if (skillGemText?.ToLower() == "click to level up")
+                                clickWhenIdle = true;
+                        }
+
+
+                    }
+
                 }
+            }
+
 
             if (Input.GetKeyState(Settings.PickUpKey.Value) ||
                 clickWhenIdle)
@@ -197,10 +266,18 @@ namespace GemUp
 
             GameController.Debug["GemUp"] = currentLabels;
 
+            if (currentLabels.Count == 0) yield break;
+
+            var oldMousePosition = Misc.RandomizePos(Mouse.GetCursorPositionVector());
+            Mouse.blockInput(true);
+
             var pickUpThisItem = currentLabels.FirstOrDefault();
 
             yield return TryToClick(pickUpThisItem);
 
+
+            Mouse.MoveCursorToPosition(oldMousePosition);
+            Mouse.blockInput(false);
             _fullWork = true;
         }
 
@@ -209,9 +286,6 @@ namespace GemUp
             var clickPos = Misc.GetClickPos(rectangleF);
             var rectangleOfGameWindow =
                 GameController.Window.GetWindowRectangleTimeCache;
-
-            var oldMousePosition =
-                Misc.RandomizePos(Mouse.GetCursorPositionVector());
 
             _clickWindowOffset = rectangleOfGameWindow.TopLeft;
 
@@ -225,7 +299,7 @@ namespace GemUp
 
             yield return _toPick;
 
-            Mouse.MoveCursorToPosition(oldMousePosition);
+            
         }
 
         #region (Re)Loading Rules
