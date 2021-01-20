@@ -143,14 +143,7 @@ namespace GemUp
                             {
                                 _goon = false;
                             }
-                            else
-                            {
-                                var _deadvisible = GameController.Game.IngameState.IngameUi.ResurrectPanel.IsVisible;
-                                if (_deadvisible)
-                                {
-                                    _goon = false;
-                                }
-                            }
+                            
 
                         }
 
