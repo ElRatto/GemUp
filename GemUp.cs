@@ -87,7 +87,7 @@ namespace GemUp
                 ImGuiExtension.IntSlider("Time wait for new click",
                     Settings.TimeBeforeNewClick);
             Settings.IdleGemUp.Value = ImGuiExtension.Checkbox(
-                "Auto Level Up Gems when standing still", Settings.IdleGemUp);
+                "Auto Level Up Gems when standing still - MAY BE BUGGY - USE AT OWN RISK", Settings.IdleGemUp);
             Settings.CheckEveryXTick.Value = ImGuiExtension.IntSlider(
                 "only check every X tick for gems (10)",
                 Settings.CheckEveryXTick);
